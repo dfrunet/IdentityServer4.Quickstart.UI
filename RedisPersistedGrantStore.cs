@@ -84,6 +84,11 @@ namespace Identity.Service
             return data.HasValue ? ConvertFromJson(data) : null;
         }
 
+        public async Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<IEnumerable<PersistedGrant>> GetAllAsync(string subjectId)
         {
             var setKey = GetSetKey(subjectId);
@@ -125,6 +130,14 @@ namespace Identity.Service
             {
                 _logger.LogInformation($"exception removing {key} persisted grant from database: {ex.Message}");
             }
+        }
+
+        public async Task RemoveAllAsync(PersistedGrantFilter filter)
+        {
+            if (filter.ClientId != null && filter.SubjectId != null && filter.Type!=null)
+                await RemoveAllAsync(filter.SubjectId, filter.ClientId, filter.Type);
+            else if(filter.ClientId != null && filter.SubjectId != null)
+                await RemoveAllAsync(filter.SubjectId, filter.ClientId);
         }
 
         public async Task RemoveAllAsync(string subjectId, string clientId)

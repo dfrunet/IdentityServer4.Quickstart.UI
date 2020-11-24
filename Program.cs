@@ -33,7 +33,6 @@ namespace IdSrvHost
                             "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
                             theme: AnsiConsoleTheme.Literate);
                 })
-                .UseApplicationInsights()
                 .ConfigureKestrel((context, options) =>
                 {
                     // Set properties and call methods on options

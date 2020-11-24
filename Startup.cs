@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -75,7 +76,7 @@ namespace IdSrvHost
 
 
 
-        public Startup(IHostingEnvironment env)
+        public Startup(IWebHostEnvironment env)
         {
             var host = new WebHostBuilder();
             var envVar = host.GetSetting("environment");
@@ -108,9 +109,10 @@ namespace IdSrvHost
                     options.Events.RaiseFailureEvents = true;
                     options.Events.RaiseErrorEvents = true;
                     options.Events.RaiseInformationEvents = true;
-                    //options.Authentication.
+                    options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;
                 })
                 .AddInMemoryClients(identityServerClients.Clients)
+                .AddInMemoryApiScopes(GetApiScopes())
                 .AddInMemoryApiResources(GetApiResources())
                 //.AddSigningCredential(cert)
                 .AddInMemoryIdentityResources(GetIdentityResources())
@@ -124,7 +126,7 @@ namespace IdSrvHost
 
 
             services.AddAuthentication()
-                .AddLocalAccessTokenValidation("token", isAuth => { });
+                .AddLocalApi("token", isAuth => { });
 
             var redis = ConnectionMultiplexer.Connect(Config[Constants.RedisConnectionStringKey]);
 
@@ -154,8 +156,7 @@ namespace IdSrvHost
 
             //services.AddCsp();
             services.AddCors();
-            services.AddMvc(/*options => options.EnableEndpointRouting = false*/);
-                //.SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+            services.AddControllersWithViews();
             services.AddDataProtection()
                 .SetApplicationName(typeof(Startup).Namespace)
                 .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys")
@@ -169,7 +170,7 @@ namespace IdSrvHost
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
 
             app.UseMiddleware<Host.Logging.RequestLoggerMiddleware>();
@@ -178,6 +179,7 @@ namespace IdSrvHost
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseCustomHeaders();
 
             app.UseStaticFiles();
 
@@ -191,7 +193,15 @@ namespace IdSrvHost
             });
             app.UseIdentityServer();
 
-            app.UseMvcWithDefaultRoute();
+            app.UseRouting();
+            app.UseAuthorization();
+            app.UseEndpoints(endpoints =>
+            {
+                //endpoints.MapControllers();
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
 
             app.Run(async (context) =>
             {
@@ -218,14 +228,15 @@ namespace IdSrvHost
         {
             return new List<ApiResource>
             {
+                new ApiResource("api"),
                 new ApiResource
                 {
                     Name = Constants.ConfigApiName,
                     DisplayName = "Config API",
                     Scopes =
                     {
-                        new Scope(Constants.ConfigApiName),
-                        new Scope("config-api.admin")
+                        Constants.ConfigApiName,
+                        "config-api.admin"
                     }
                 },
                 new ApiResource
@@ -233,25 +244,46 @@ namespace IdSrvHost
                     Name = "graph-api",
                     Scopes =
                     {
-                        new Scope
-                        {
-                            Name = "graph-api",
-                            UserClaims =
-                            {
-                                JwtClaimTypes.SessionId,
-                                JwtClaimTypes.Role,
-                                Constants.TenantIdClaimType,
-                                JwtClaimTypes.Email,
-                                JwtClaimTypes.Locale,
-                                Constants.SupportedModuleClaimType
-                            }
-                        },
-                        new Scope("graph-api.backend"),
-                        new Scope("external-callback")
+                         "graph-api",
+                         "graph-api.backend",
+                         "external-callback"
                     }
                 }
             };
         }
+
+
+        public static IEnumerable<ApiScope> GetApiScopes()
+        {
+            return new List<ApiScope>
+            {
+                new ApiScope("api"),
+                new ApiScope
+                {
+                    Name = Constants.ConfigApiName,
+                    DisplayName = "Config API"
+                },
+                new ApiScope("config-api.admin"),
+                new ApiScope
+                {
+                    Name = "graph-api",
+
+                    UserClaims =
+                    {
+                        JwtClaimTypes.SessionId,
+                        JwtClaimTypes.Role,
+                        Constants.TenantIdClaimType,
+                        JwtClaimTypes.Email,
+                        JwtClaimTypes.Locale,
+                        Constants.SupportedModuleClaimType
+                    }
+                },
+                new ApiScope("graph-api.backend"),
+                new ApiScope("external-callback")
+
+            };
+        }
+
 
         public static List<IdentityResource> GetIdentityResources()
         {

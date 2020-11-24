@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using IdentityServer4;
 using IdentityServer4.Models;
 
@@ -8,12 +9,49 @@ namespace IdSrvHost.Configuration.IdentityServer
     {
         public string SubscriptionModule { get; set; }
 
+
+
+        public string ClientSecret
+        {
+            get => ClientSecrets.FirstOrDefault()?.Value;
+            set
+            {
+                var secret = new Secret { Value = value.Sha512() };
+                ClientSecrets = new[] { secret };
+            }
+        }
+
+
+        public new ICollection<string> AllowedGrantTypes
+        {
+            get
+            {
+                //if (base.AllowedGrantTypes.Count == 0)
+                //    base.AllowedGrantTypes = GrantTypes.Implicit;
+                return
+                    base.AllowedGrantTypes; //
+
+            }
+
+            set
+            {
+                if (base.AllowedGrantTypes.Count == 0 && value.Count == 0)
+                {
+                    base.AllowedGrantTypes = GrantTypes.Implicit;
+                }
+                else
+                {
+                    base.AllowedGrantTypes = value;
+                }
+            }
+        }
+
         public WebAppClient()
         {
             //ClientId = "spa-client";
             RequireConsent = false;
+            RequireClientSecret = false;
             Enabled = true;
-            AllowedGrantTypes = GrantTypes.Implicit;
             AccessTokenType = AccessTokenType.Jwt;
             AlwaysIncludeUserClaimsInIdToken = true;
             UpdateAccessTokenClaimsOnRefresh = true;

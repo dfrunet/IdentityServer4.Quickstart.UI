@@ -24,7 +24,7 @@ namespace Wemore.Identity.Service
         public ExtendedUserSession(IHttpContextAccessor httpContextAccessor, IAuthenticationSchemeProvider schemes,
             IAuthenticationHandlerProvider handlers, IdentityServerOptions options, ISystemClock clock,
             ILogger<IUserSession> logger, IDistributedCache redisCache) : base(httpContextAccessor,
-            schemes, handlers, options, clock, logger)
+            handlers, options, clock, logger)
         {
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
