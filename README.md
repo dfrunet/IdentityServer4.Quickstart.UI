@@ -1,4 +1,4 @@
-# Quickstart UI for an in-memory IdentityServer4 v2
+# Quickstart UI for an in-memory IdentityServer4 v4
 
 This repo contains an MVC based UI for login, logout and consent that supplements an IdentityServer4 configured for in-memory clients, users, and scopes. 
 Note that the repo doesn't include solution and project files, but should be copied to your project as described below.
